@@ -26,9 +26,10 @@ class SniperAssistant:
         
         # 2. Bootstrap Historical Data (Mock implementation for setup completeness)
         # In reality, loop through required instruments and timeframes.
-        log.info("Bootstrapping historical data...")
+        log.info("Bootstrapping historical data for 1m and 4h timeframes...")
         # dummy_df = pd.DataFrame(columns=['time', 'open', 'high', 'low', 'close', 'volume'])
         # self.strategy_engine.bootstrap_data("NIFTY50", "1m", dummy_df)
+        # self.strategy_engine.bootstrap_data("NIFTY50", "4h", dummy_df)
         
     def _evaluate_active_trades(self, current_price: float, symbol: str):
         for trade in self.active_trades_cache:

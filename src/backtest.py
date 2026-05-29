@@ -1,5 +1,6 @@
 import os
 import pandas as pd
+import pandas_ta as ta
 from datetime import datetime, timedelta
 import time
 from src.api.market_data import MarketData
@@ -24,15 +25,18 @@ def format_dhan_historical(dhan_data):
     # Ensure columns match what StrategyEngine expects
     if 'start_Time' in df.columns:
         # Convert unix timestamps to datetime strings or just datetime objects
-        df['time'] = pd.to_datetime(df['start_Time'], unit='s')
+        df['time'] = pd.to_datetime(df['start_Time'], unit='s').dt.tz_localize('UTC').dt.tz_convert('Asia/Kolkata').dt.tz_localize(None)
         df = df.drop(columns=['start_Time'])
+    elif 'timestamp' in df.columns:
+        df['time'] = pd.to_datetime(df['timestamp'], unit='s').dt.tz_localize('UTC').dt.tz_convert('Asia/Kolkata').dt.tz_localize(None)
+        df = df.drop(columns=['timestamp'])
         
     # Capitalization fixes just in case
     df = df.rename(columns={'Open': 'open', 'High': 'high', 'Low': 'low', 'Close': 'close', 'Volume': 'volume'})
     return df
 
-def run_backtest():
-    log.info("Starting Backtest...")
+def run_backtest(api_timeframe="5", display_timeframe="5m", days_back=5):
+    log.info(f"Starting Backtest for {display_timeframe}...")
     
     # Initialize Market Data client
     md = MarketData()
@@ -42,16 +46,16 @@ def run_backtest():
     symbol = "13" # Nifty 50 Index standard Dhan ID
     exchange_segment = "IDX_I" # Index segment
     
-    # We will test over the last 5 days
+    # We will test over the last days_back days
     to_date = datetime.now().strftime('%Y-%m-%d 15:30:00')
-    from_date = (datetime.now() - timedelta(days=5)).strftime('%Y-%m-%d 09:15:00')
+    from_date = (datetime.now() - timedelta(days=days_back)).strftime('%Y-%m-%d 09:15:00')
     
     log.info(f"Fetching data for {symbol} from {from_date} to {to_date}")
     
     raw_data = md.fetch_historical_data(
         security_id=symbol,
         exchange_segment=exchange_segment,
-        timeframe='5',
+        timeframe=api_timeframe,
         from_date=from_date,
         to_date=to_date
     )
@@ -87,6 +91,21 @@ def run_backtest():
         log.error("Formatted DataFrame is empty.")
         return
         
+    if display_timeframe == '4h':
+        # Resample from 60m to 4h, aligning at 9:15 (09:15 -> 13:15, 13:15 -> 15:30)
+        df.set_index('time', inplace=True)
+        # Using 4H frequency and offset to align with 09:15
+        df = df.resample('4h', offset='15min').agg({
+            'open': 'first',
+            'high': 'max',
+            'low': 'min',
+            'close': 'last',
+            'volume': 'sum'
+        }).dropna().reset_index()
+        
+    # Calculate ATR for SL buffer before iterating
+    df['atr'] = ta.atr(df['high'], df['low'], df['close'], length=14)
+        
     log.info(f"Loaded {len(df)} candles for backtesting.")
     
     # We need a minimum amount of data to bootstrap the indicators (e.g., 50 for EMA 50)
@@ -97,7 +116,7 @@ def run_backtest():
         
     # Bootstrap initial state
     initial_df = df.iloc[:bootstrap_size].copy()
-    engine.bootstrap_data(symbol, "5m", initial_df)
+    engine.bootstrap_data(symbol, display_timeframe, initial_df)
     
     trades = []
     active_trade = None
@@ -114,7 +133,7 @@ def run_backtest():
         }
         
         # Process the candle to update indicators and check for signals
-        signal = engine.process_new_candle(symbol, "5m", candle)
+        signal = engine.process_new_candle(symbol, display_timeframe, candle)
         
         # Manage active trade
         if active_trade:
@@ -149,8 +168,10 @@ def run_backtest():
         if signal and not active_trade:
             signal['entry_time'] = candle['time']
             signal['status'] = 'ACTIVE'
+            
             active_trade = signal
             log.info(f"Entered {signal['direction']} at {signal['entry_price']} on {signal['entry_time']}")
+            log.info(f"Trade details: {signal}")
 
     # Print Results
     log.info("\n--- BACKTEST RESULTS ---")
@@ -169,13 +190,14 @@ def run_backtest():
         # Send to Discord
         notifier.send_backtest_result(
             symbol=symbol,
-            timeframe="5m",
+            timeframe=display_timeframe,
             total_trades=len(trades),
             wins=len(wins),
             losses=len(losses),
             win_rate=win_rate,
             from_date=from_date,
-            to_date=to_date
+            to_date=to_date,
+            trades=trades
         )
         
         log.info("\nTrade Log:")
@@ -185,14 +207,24 @@ def run_backtest():
         log.info("No trades executed during this period.")
         notifier.send_backtest_result(
             symbol=symbol,
-            timeframe="5m",
+            timeframe=display_timeframe,
             total_trades=0,
             wins=0,
             losses=0,
             win_rate=0.0,
             from_date=from_date,
-            to_date=to_date
+            to_date=to_date,
+            trades=[]
         )
 
 if __name__ == "__main__":
-    run_backtest()
+    import sys
+    if len(sys.argv) > 1:
+        api_tf = sys.argv[1]
+        disp_tf = sys.argv[2] if len(sys.argv) > 2 else "5m"
+        days = int(sys.argv[3]) if len(sys.argv) > 3 else 5
+        run_backtest(api_timeframe=api_tf, display_timeframe=disp_tf, days_back=days)
+    else:
+        # Always run 1m and 4h backtests by default
+        run_backtest(api_timeframe="1", display_timeframe="1m", days_back=5)
+        run_backtest(api_timeframe="60", display_timeframe="4h", days_back=60)

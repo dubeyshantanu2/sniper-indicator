@@ -45,6 +45,9 @@ class StrategyEngine:
         
         # Volume SMA
         df['vol_sma'] = ta.sma(df['volume'], length=self.vol_ma_len)
+        
+        # ATR for Stop Loss buffer
+        df['atr'] = ta.atr(df['high'], df['low'], df['close'], length=14)
 
     def process_new_candle(self, symbol: str, timeframe: str, candle: dict):
         """
@@ -61,9 +64,9 @@ class StrategyEngine:
         new_row = pd.DataFrame([candle])
         df = pd.concat([df, new_row], ignore_index=True)
         
-        # Keep window size reasonable (e.g., 500 max)
-        if len(df) > 500:
-            df = df.iloc[-500:].reset_index(drop=True)
+        # Keep window size reasonable (e.g., 2000 max to retain daily anchor for 1m TF)
+        if len(df) > 2000:
+            df = df.iloc[-2000:].reset_index(drop=True)
             
         self.dataframes[symbol][timeframe] = df
         
@@ -80,7 +83,10 @@ class StrategyEngine:
         ema_fast = current_bar['ema_fast']
         vwap_val = current_bar['VWAP_D']
         vol_sma = current_bar['vol_sma']
-        
+        atr_val = current_bar.get('atr', 10)
+        if pd.isna(atr_val):
+            atr_val = 10
+            
         # Anatomy of the Candle
         candle_body = max(abs(close_p - open_p), 0.05) # Prevent divide by zero issues with 0 tick
         wick_upper = high_p - max(close_p, open_p)
@@ -94,22 +100,25 @@ class StrategyEngine:
         vol_condition = vol >= (vol_sma * self.vol_multiplier)
         
         signal = None
+        atr_multiplier = 1.5
         
         # Long Entry Sweep
         long_sweep_structure = wick_lower >= (candle_body * self.wick_multiplier) and wick_upper <= (candle_body * self.opp_wick_max)
         if long_sweep_structure and touch_key_level and close_p > open_p and vol_condition:
             signal = 'LONG'
-            sl = low_p
+            base_sl = low_p
+            sl = low_p - (atr_val * atr_multiplier)
             
         # Short Entry Sweep
         short_sweep_structure = wick_upper >= (candle_body * self.wick_multiplier) and wick_lower <= (candle_body * self.opp_wick_max)
         if short_sweep_structure and touch_key_level and close_p < open_p and vol_condition:
             signal = 'SHORT'
-            sl = high_p
+            base_sl = high_p
+            sl = high_p + (atr_val * atr_multiplier)
             
         if signal:
             entry = close_p
-            risk = abs(entry - sl)
+            risk = abs(entry - base_sl)
             
             # Suggest strike (simplified logic, round to nearest 100 for Nifty, just an example)
             # In real scenario, needs instrument specific offset

@@ -15,7 +15,8 @@ This document tracks potential improvements to the Sniper-Indicator strategy (bo
 ## 3. Smarter Stop Losses (ATR Buffer)
 *   **Problem:** Stop Losses placed exactly at the candle low/high are vulnerable to liquidity grabs by market makers.
 *   **Solution:** Add an Average True Range (ATR) buffer to the Stop Loss. 
-*   **Formula:** `Stop Loss = Candle Low - (ATR * 0.5)` for LONGs.
+*   **Current State:** Implemented a `1.5x` ATR buffer in the main engine (`src/strategy/engine.py`) after proving it increases win rate in 1m backtests.
+*   **TODO:** Discuss and finalize if `1.5x` is the permanent solution, or if we should explore structural (swing-based) stop losses or close-basis trigger logic.
 *   **Complexity:** Low (requires adding `pandas-ta` ATR calculation).
 
 ## 4. Multi-Timeframe Alignment
