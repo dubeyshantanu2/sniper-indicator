@@ -1,7 +1,7 @@
 -- Supabase SQL Schema for Sniper-Indicator Trading Assistant
 
--- Create the active_trades table
-CREATE TABLE public.active_trades (
+-- Use IF NOT EXISTS to prevent the 'relation already exists' error
+CREATE TABLE IF NOT EXISTS public.active_trades (
     id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     trade_id TEXT NOT NULL,
     symbol TEXT NOT NULL,
@@ -19,23 +19,29 @@ CREATE TABLE public.active_trades (
 );
 
 -- Set up Row Level Security (RLS)
--- By default, we enable RLS to secure the data.
 ALTER TABLE public.active_trades ENABLE ROW LEVEL SECURITY;
 
--- Create a policy that allows all authenticated and anon roles to insert/select/update
--- (Modify this in production if you want strictly authenticated access)
+-- Drop existing policies to prevent 'policy already exists' errors if run multiple times
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.active_trades;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON public.active_trades;
+DROP POLICY IF EXISTS "Enable update access for all users" ON public.active_trades;
+
+-- Create policies
 CREATE POLICY "Enable read access for all users" ON public.active_trades FOR SELECT USING (true);
 CREATE POLICY "Enable insert access for all users" ON public.active_trades FOR INSERT WITH CHECK (true);
 CREATE POLICY "Enable update access for all users" ON public.active_trades FOR UPDATE USING (true);
 
--- Create a function and trigger to automatically update the 'updated_at' column
+-- Create or Replace the function
 CREATE OR REPLACE FUNCTION update_modified_column()
 RETURNS TRIGGER AS $$
 BEGIN
-    NEW.updated_at = now();
+    NEW.updated_at = timezone('Asia/Kolkata'::text, now());
     RETURN NEW;
 END;
 $$ language 'plpgsql';
+
+-- Drop the trigger if it exists before creating it again
+DROP TRIGGER IF EXISTS update_active_trades_modtime ON public.active_trades;
 
 CREATE TRIGGER update_active_trades_modtime
     BEFORE UPDATE ON public.active_trades
