@@ -71,3 +71,19 @@ class DiscordNotifier:
             "color": 15158332, # Red
         }
         self._send_embed(embed)
+
+    def send_backtest_result(self, symbol: str, timeframe: str, total_trades: int, wins: int, losses: int, win_rate: float, from_date: str, to_date: str):
+        description = (
+            f"**Period:** {from_date} to {to_date}\n"
+            f"**Total Trades:** {total_trades}\n"
+            f"**Wins:** {wins}\n"
+            f"**Losses:** {losses}\n"
+            f"**Win Rate:** {win_rate:.2f}%"
+        )
+        
+        embed = {
+            "title": f"📊 Backtest Results: {symbol} ({timeframe})",
+            "description": description,
+            "color": 3447003, # Blue
+        }
+        self._send_embed(embed)

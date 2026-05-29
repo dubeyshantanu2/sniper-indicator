@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import time
 from src.api.market_data import MarketData
 from src.strategy.engine import StrategyEngine
+from src.notifications.notifier import DiscordNotifier
 from src.utils.logger import log
 
 def format_dhan_historical(dhan_data):
@@ -36,6 +37,7 @@ def run_backtest():
     # Initialize Market Data client
     md = MarketData()
     engine = StrategyEngine()
+    notifier = DiscordNotifier()
     
     symbol = "13" # Nifty 50 Index standard Dhan ID
     exchange_segment = "IDX_I" # Index segment
@@ -164,11 +166,33 @@ def run_backtest():
         log.info(f"Losses: {len(losses)}")
         log.info(f"Win Rate (T2 Exit): {win_rate:.2f}%")
         
+        # Send to Discord
+        notifier.send_backtest_result(
+            symbol=symbol,
+            timeframe="5m",
+            total_trades=len(trades),
+            wins=len(wins),
+            losses=len(losses),
+            win_rate=win_rate,
+            from_date=from_date,
+            to_date=to_date
+        )
+        
         log.info("\nTrade Log:")
         for t in trades:
             log.info(f"{t['entry_time']} | {t['direction']} | Entry: {t['entry_price']:.2f} | Result: {t['status']}")
     else:
         log.info("No trades executed during this period.")
+        notifier.send_backtest_result(
+            symbol=symbol,
+            timeframe="5m",
+            total_trades=0,
+            wins=0,
+            losses=0,
+            win_rate=0.0,
+            from_date=from_date,
+            to_date=to_date
+        )
 
 if __name__ == "__main__":
     run_backtest()
