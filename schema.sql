@@ -1,7 +1,7 @@
 -- Supabase SQL Schema for Sniper-Indicator Trading Assistant
 
 -- Use IF NOT EXISTS to prevent the 'relation already exists' error
-CREATE TABLE IF NOT EXISTS public.active_trades (
+CREATE TABLE IF NOT EXISTS public.sniper_active_trades (
     id UUID NOT NULL PRIMARY KEY DEFAULT uuid_generate_v4(),
     trade_id TEXT NOT NULL,
     symbol TEXT NOT NULL,
@@ -19,17 +19,17 @@ CREATE TABLE IF NOT EXISTS public.active_trades (
 );
 
 -- Set up Row Level Security (RLS)
-ALTER TABLE public.active_trades ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.sniper_active_trades ENABLE ROW LEVEL SECURITY;
 
 -- Drop existing policies to prevent 'policy already exists' errors if run multiple times
-DROP POLICY IF EXISTS "Enable read access for all users" ON public.active_trades;
-DROP POLICY IF EXISTS "Enable insert access for all users" ON public.active_trades;
-DROP POLICY IF EXISTS "Enable update access for all users" ON public.active_trades;
+DROP POLICY IF EXISTS "Enable read access for all users" ON public.sniper_active_trades;
+DROP POLICY IF EXISTS "Enable insert access for all users" ON public.sniper_active_trades;
+DROP POLICY IF EXISTS "Enable update access for all users" ON public.sniper_active_trades;
 
 -- Create policies
-CREATE POLICY "Enable read access for all users" ON public.active_trades FOR SELECT USING (true);
-CREATE POLICY "Enable insert access for all users" ON public.active_trades FOR INSERT WITH CHECK (true);
-CREATE POLICY "Enable update access for all users" ON public.active_trades FOR UPDATE USING (true);
+CREATE POLICY "Enable read access for all users" ON public.sniper_active_trades FOR SELECT USING (true);
+CREATE POLICY "Enable insert access for all users" ON public.sniper_active_trades FOR INSERT WITH CHECK (true);
+CREATE POLICY "Enable update access for all users" ON public.sniper_active_trades FOR UPDATE USING (true);
 
 -- Create or Replace the function
 CREATE OR REPLACE FUNCTION update_modified_column()
@@ -41,9 +41,9 @@ END;
 $$ language 'plpgsql';
 
 -- Drop the trigger if it exists before creating it again
-DROP TRIGGER IF EXISTS update_active_trades_modtime ON public.active_trades;
+DROP TRIGGER IF EXISTS update_sniper_active_trades_modtime ON public.sniper_active_trades;
 
-CREATE TRIGGER update_active_trades_modtime
-    BEFORE UPDATE ON public.active_trades
+CREATE TRIGGER update_sniper_active_trades_modtime
+    BEFORE UPDATE ON public.sniper_active_trades
     FOR EACH ROW
     EXECUTE FUNCTION update_modified_column();

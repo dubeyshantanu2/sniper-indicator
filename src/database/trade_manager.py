@@ -9,7 +9,7 @@ from src.utils.logger import log
 class TradeManager:
     def __init__(self):
         self.supabase: Client = create_client(Config.SUPABASE_URL, Config.SUPABASE_KEY)
-        self.table_name = "active_trades"
+        self.table_name = "sniper_active_trades"
 
     def _generate_trade_id(self):
         return str(random.randint(1000, 9999))

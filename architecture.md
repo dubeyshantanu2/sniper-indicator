@@ -49,7 +49,7 @@ To build a Python-based, multi-timeframe (1-minute and 4-hour) trading assistant
 
 ## 4. Database Schema (Supabase)
 
-Table: `active_trades`
+Table: `sniper_active_trades`
 *   `id` (UUID, Primary Key)
 *   `trade_id` (String, 4-digit random, e.g., "7492")
 *   `symbol` (String, e.g., "NIFTY50")
@@ -79,7 +79,7 @@ Table: `active_trades`
 ## 6. Implementation Steps
 
 1.  **Project Setup:** Initialize Python project, `requirements.txt`, and basic directory structure.
-2.  **Supabase Setup:** Create the `active_trades` table and configure the Python client.
+2.  **Supabase Setup:** Create the `sniper_active_trades` table and configure the Python client.
 3.  **Dhan Connection:** Implement REST historical fetch and WebSocket tick ingestion.
 4.  **Strategy Engine:** Build the logic to convert ticks to candles and apply the EMA/VWAP/Sweep logic using `pandas`.
 5.  **Trade Management Loop:** Implement the logic to create trades in Supabase and track them against live ticks.
