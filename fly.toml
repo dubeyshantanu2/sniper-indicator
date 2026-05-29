@@ -1,0 +1,12 @@
+app = "sniper-trading-assistant"
+primary_region = "bom"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  # Configured via fly secrets set
+  # DHAN_CLIENT_ID=...
+
+[processes]
+  app = "python -m src.main"
