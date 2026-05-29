@@ -1,6 +1,7 @@
 import uuid
 import random
 from datetime import datetime
+from zoneinfo import ZoneInfo
 from supabase import create_client, Client
 from src.utils.config import Config
 from src.utils.logger import log
@@ -23,7 +24,7 @@ class TradeManager:
 
     def create_trade(self, trade_data: dict):
         trade_id = self._generate_trade_id()
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(ZoneInfo('Asia/Kolkata')).isoformat()
         
         record = {
             "id": str(uuid.uuid4()),
@@ -51,7 +52,7 @@ class TradeManager:
             return None
 
     def update_trade_status(self, db_id: str, new_status: str, new_sl: float = None):
-        now = datetime.utcnow().isoformat()
+        now = datetime.now(ZoneInfo('Asia/Kolkata')).isoformat()
         update_data = {
             "status": new_status,
             "updated_at": now

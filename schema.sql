@@ -14,8 +14,8 @@ CREATE TABLE public.active_trades (
     t3_price NUMERIC NOT NULL,
     suggested_strike TEXT,
     status TEXT NOT NULL DEFAULT 'Active', -- 'Active', 'T1', 'T2', 'Closed'
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('Asia/Kolkata'::text, now()) NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('Asia/Kolkata'::text, now()) NOT NULL
 );
 
 -- Set up Row Level Security (RLS)
