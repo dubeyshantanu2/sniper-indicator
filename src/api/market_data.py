@@ -1,14 +1,17 @@
 import json
 import asyncio
+import requests
 from dhanhq import dhanhq
 from src.utils.config import Config
 from src.utils.logger import log
 
 class MarketData:
     def __init__(self):
+        self.client_id = Config.DHAN_CLIENT_ID
+        self.access_token = Config.DHAN_ACCESS_TOKEN
         self.dhan = dhanhq(
-            client_id=Config.DHAN_CLIENT_ID,
-            access_token=Config.DHAN_ACCESS_TOKEN
+            client_id=self.client_id,
+            access_token=self.access_token
         )
         self.subscribers = [] # callbacks for new ticks
 
@@ -17,27 +20,40 @@ class MarketData:
 
     def fetch_historical_data(self, security_id, exchange_segment, timeframe='1', from_date=None, to_date=None):
         """
-        Fetches historical intraday data. Timeframe in minutes.
+        Fetches historical intraday data using Dhan V2 API. Timeframe in minutes.
+        Dates should be in 'YYYY-MM-DD HH:mm:ss' format.
         """
         try:
-            # Note: The dhanhq library requires dates in YYYY-MM-DD format
-            log.info(f"Fetching historical data for {security_id}")
-            response = self.dhan.historical_minute_charts(
-                symbol=security_id,
-                exchange_segment=exchange_segment,
-                instrument_type='INDEX',
-                expiry_code=0,
-                from_date=from_date,
-                to_date=to_date
-            )
-            if response['status'] == 'success':
-                return response['data']
+            log.info(f"Fetching historical data for {security_id} via V2 API")
+            url = "https://api.dhan.co/v2/charts/intraday"
+            headers = {
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "access-token": self.access_token,
+                "client-id": self.client_id
+            }
+            payload = {
+                "securityId": str(security_id),
+                "exchangeSegment": exchange_segment,
+                "instrument": "INDEX", # or pass this as parameter if needed
+                "interval": str(timeframe),
+                "oi": False,
+                "fromDate": from_date,
+                "toDate": to_date
+            }
+            
+            response = requests.post(url, headers=headers, json=payload)
+            response.raise_for_status()
+            data = response.json()
+            
+            if data.get('status') == 'success':
+                return data.get('data')
             else:
-                log.error(f"Failed to fetch historical data: {response}")
-                return None
-        except Exception as e:
+                log.error(f"Failed to fetch historical data: {data}")
+                return data # Return the failure response so backtest can generate mock data
+        except requests.exceptions.RequestException as e:
             log.error(f"Error fetching historical data: {e}")
-            return None
+            return {"status": "failure", "remarks": str(e)}
 
     async def start_websocket(self, instruments):
         """
