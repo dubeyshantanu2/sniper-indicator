@@ -1,0 +1,153 @@
+// This Pine Script® code is subject to the terms of the Mozilla Public License 2.0 at https://mozilla.org/MPL/2.0/
+// © dubeyshantanu2
+
+//@version=6
+//@version=6
+indicator('Sniper V6.6 Pro', overlay = true)
+
+// --- 1. MOVING AVERAGES ---
+g1 = '1. Moving Averages'
+s_ema = input.bool(true, 'Show EMAs', group = g1)
+l14 = input.int(14, 'Fast EMA', group = g1)
+c14 = input.color(color.white, 'C14', group = g1)
+l50 = input.int(50, 'Intermediate EMA', group = g1)
+c50 = input.color(color.blue, 'C50', group = g1)
+l200 = input.int(200, 'Macro EMA', group = g1)
+c200 = input.color(color.red, 'C200', group = g1)
+
+// --- 2. VWAP ---
+g2 = '2. VWAP'
+s_vw = input.bool(true, 'Show VWAP', group = g2)
+cvw = input.color(color.yellow, 'Color', group = g2)
+
+// --- 3. FVG ---
+g3 = '3. FVG'
+s_f = input.bool(true, 'Show Boxes', group = g3)
+cb = input.color(color.aqua, 'Bullish', group = g3)
+cr = input.color(color.red, 'Bearish', group = g3)
+tbg = input.int(85, 'Background', group = g3)
+tbr = input.int(50, 'Border', group = g3)
+pro = input.int(15, 'Proj.', group = g3)
+
+// --- 4. TRIGGERS ---
+g4 = '4. Sensitivity (Triggers)'
+s_s = input.bool(true, 'Show Signals', group = g4)
+cl = input.color(color.green, 'LONG', group = g4)
+cs = input.color(color.red, 'SHORT', group = g4)
+w_mul = input.float(1.5, 'Sweep Wick Size (x Body)', step = 0.1, group = g4)
+o_mul = input.float(0.6, 'Max Opposite Wick (x Body)', step = 0.1, group = g4)
+
+// --- 5. VOLUME ---
+g5 = '5. Volume'
+s_vol = input.bool(true, 'Volume Filter', group = g5)
+v_len = input.int(20, 'Average Period', group = g5)
+v_mul = input.float(1.1, 'Volume Multiplier', step = 0.1, group = g5)
+
+// --- 6. CVD DIVERGENCE ---
+g6 = '6. Delta Divergence (CVD)'
+s_cvd = input.bool(true, 'Show CVD Border', group = g6)
+c_cvd_bull = input.color(color.new(color.aqua, 20), 'Bullish Border (Aqua)', group = g6)
+c_cvd_bear = input.color(color.new(color.fuchsia, 20), 'Bearish Border (Fuchsia)', group = g6)
+
+// --- 7. ORB (Opening Range Breakout) ---
+g7 = '7. ORB (Opening Range)'
+s_orb = input.bool(true, 'Show ORB', group = g7)
+orb_sess = input.session('0915-0930', 'ORB Time', group = g7)
+tz_kolkata = 'Asia/Kolkata'
+c_orb = input.color(color.orange, 'Line Color', group = g7)
+orb_sty_str = input.string('Dotted', 'Line Style', options=['Solid', 'Dashed', 'Dotted'], group = g7)
+show_orb_lbl = input.bool(true, 'Show Labels (ORB-H/L)', group = g7)
+
+// ==========================================
+// --- DELTA DIVERGENCE LOGIC ---
+// ==========================================
+delta = close > open ? volume : close < open ? -volume : 0
+cvd = ta.cum(delta)
+div_alcista = low < low[1] and cvd > cvd[1] and close > open
+div_bajista = high > high[1] and cvd < cvd[1] and close < open
+color_borde = s_cvd and div_alcista ? c_cvd_bull : s_cvd and div_bajista ? c_cvd_bear : na
+barcolor(color_borde, title = 'Divergence Border Color')
+
+// ==========================================
+// --- HORIZONTAL PRECISION ORB LOGIC ---
+// ==========================================
+orb_sty = orb_sty_str == 'Solid' ? line.style_solid : orb_sty_str == 'Dashed' ? line.style_dashed : line.style_dotted
+
+var float calc_orb_h = na
+var float calc_orb_l = na
+var line l_orb_h = na
+var line l_orb_l = na
+var label lb_orb_h = na
+var label lb_orb_l = na
+
+// Session detection (Fixed for V6 using time integer)
+time_orb = time("", orb_sess, tz_kolkata)
+in_calc_sess = not na(time_orb)
+is_first_calc_bar = not na(time_orb) and na(time_orb[1])
+is_orb_session_end = na(time_orb) and not na(time_orb[1])
+
+is_new_day = time("D", tz_kolkata) != time("D", tz_kolkata)[1]
+
+if is_new_day
+    calc_orb_h := na
+    calc_orb_l := na
+    if s_orb
+        line.delete(l_orb_h)
+        line.delete(l_orb_l)
+        label.delete(lb_orb_h)
+        label.delete(lb_orb_l)
+
+if in_calc_sess
+    if is_first_calc_bar
+        calc_orb_h := high
+        calc_orb_l := low
+    else
+        calc_orb_h := math.max(calc_orb_h, high)
+        calc_orb_l := math.min(calc_orb_l, low)
+
+if is_orb_session_end and s_orb
+    l_orb_h := line.new(bar_index, calc_orb_h, bar_index + 1, calc_orb_h, color = c_orb, style = orb_sty, width = 1, extend = extend.right)
+    l_orb_l := line.new(bar_index, calc_orb_l, bar_index + 1, calc_orb_l, color = c_orb, style = orb_sty, width = 1, extend = extend.right)
+    
+    if show_orb_lbl
+        lb_orb_h := label.new(bar_index, calc_orb_h, 'ORB-H', color = color.new(color.white, 100), textcolor = c_orb, style = label.style_label_down, size = size.small)
+        lb_orb_l := label.new(bar_index, calc_orb_l, 'ORB-L', color = color.new(color.white, 100), textcolor = c_orb, style = label.style_label_up, size = size.small)
+
+if not na(l_orb_h) and show_orb_lbl
+    label.set_x(lb_orb_h, bar_index)
+    label.set_x(lb_orb_l, bar_index)
+
+// ==========================================
+// --- MAIN CALCULATIONS ---
+// ==========================================
+var b_bx = array.new<box>()
+var r_bx = array.new<box>()
+e14 = ta.ema(close, l14), e50 = ta.ema(close, l50), e200 = ta.ema(close, l200), vw = ta.vwap(close)
+plot(s_ema ? e14 : na, color = c14, linewidth = 2), plot(s_ema ? e50 : na, color = c50, linewidth = 2), plot(s_ema ? e200 : na, color = c200, linewidth = 2), plot(s_vw ? vw : na, color = cvw)
+bg_b = color.new(cb, tbg), br_b = color.new(cb, tbr), bg_r = color.new(cr, tbg), br_r = color.new(cr, tbr)
+i2 = bar_index[2], ip = bar_index + pro, h2 = high[2], l2 = low[2]
+if s_f and low > h2
+    array.push(b_bx, box.new(i2, low, ip, h2, border_color = br_b, bgcolor = bg_b))
+if s_f and high < l2
+    array.push(r_bx, box.new(i2, l2, ip, high, border_color = br_r, bgcolor = bg_r))
+sz_b = array.size(b_bx)
+if sz_b > 0
+    for i = sz_b - 1 to 0 by 1
+        x = array.get(b_bx, i), box.set_right(x, ip)
+        if low <= box.get_bottom(x)
+            box.delete(x), array.remove(b_bx, i)
+sz_r = array.size(r_bx)
+if sz_r > 0
+    for i = sz_r - 1 to 0 by 1
+        x = array.get(r_bx, i), box.set_right(x, ip)
+        if high >= box.get_top(x)
+            box.delete(x), array.remove(r_bx, i)
+bod = math.max(math.abs(close - open), syminfo.mintick), wUp = high - math.max(close, open), wDn = math.min(close, open) - low
+t1 = low <= e14 and high >= e14, t2 = low <= vw and high >= vw, tch = t1 or t2
+v_sma = ta.sma(volume, v_len), v_ok = s_vol ? volume >= v_sma * v_mul : true
+L1 = wDn >= bod * w_mul and wUp <= bod * o_mul, sL = L1 and tch and close > open and v_ok
+S1 = wUp >= bod * w_mul and wDn <= bod * o_mul, sS = S1 and tch and close < open and v_ok
+shUp = shape.triangleup, shDn = shape.triangledown, locB = location.belowbar, locA = location.abovebar
+plotshape(s_s and sL, 'LONG', shUp, locB, cl, text = 'LONG', textcolor = cl, size = size.small)
+plotshape(s_s and sS, 'SHORT', shDn, locA, cs, text = 'SHORT', textcolor = cs, size = size.small)
+alertcondition(sL, 'LONG', 'Bullish Sweep'), alertcondition(sS, 'SHORT', 'Bearish Sweep')
