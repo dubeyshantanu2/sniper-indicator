@@ -46,11 +46,11 @@ class MarketData:
             response.raise_for_status()
             data = response.json()
             
-            if data.get('status') == 'success':
-                return data.get('data')
-            else:
+            if data.get('status') == 'failure':
                 log.error(f"Failed to fetch historical data: {data}")
-                return data # Return the failure response so backtest can generate mock data
+                return data
+                
+            return data.get('data', data)
         except requests.exceptions.RequestException as e:
             log.error(f"Error fetching historical data: {e}")
             return {"status": "failure", "remarks": str(e)}
