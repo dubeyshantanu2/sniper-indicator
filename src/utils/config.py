@@ -14,6 +14,7 @@ class Config:
     
     # Discord
     DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
+    DISCORD_HEALTH_WEBHOOK_URL = os.getenv("DISCORD_HEALTH_WEBHOOK_URL")
 
     @classmethod
     def validate(cls):

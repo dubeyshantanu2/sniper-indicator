@@ -5,19 +5,29 @@ from src.utils.logger import log
 class DiscordNotifier:
     def __init__(self):
         self.webhook_url = Config.DISCORD_WEBHOOK_URL
+        self.health_webhook_url = Config.DISCORD_HEALTH_WEBHOOK_URL
 
-    def _send_embed(self, embed: dict):
-        if not self.webhook_url:
+    def _send_embed(self, embed: dict, is_health_check: bool = False):
+        webhook_url = self.health_webhook_url if is_health_check else self.webhook_url
+        if not webhook_url:
             log.warning("Discord webhook URL not configured. Skipping notification.")
             return
 
         payload = {"embeds": [embed]}
         try:
-            response = requests.post(self.webhook_url, json=payload)
+            response = requests.post(webhook_url, json=payload)
             response.raise_for_status()
             log.debug(f"Successfully sent Discord notification.")
         except requests.exceptions.RequestException as e:
             log.error(f"Failed to send Discord notification: {e}")
+
+    def send_system_health(self, active_trades_count: int):
+        embed = {
+            "title": "⚙️ System Health Update",
+            "description": f"The Sniper Trading Assistant is running smoothly.\n**Active Trades Tracked:** `{active_trades_count}`",
+            "color": 3447003, # Blue
+        }
+        self._send_embed(embed, is_health_check=True)
 
     def send_startup_briefing(self, active_trades: list):
         if not active_trades:

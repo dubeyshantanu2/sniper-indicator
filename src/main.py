@@ -118,8 +118,17 @@ class SniperAssistant:
                     # Add to tracking
                     self.active_trades_cache.append(new_trade)
 
+    async def health_check_loop(self):
+        while True:
+            await asyncio.sleep(900) # 15 minutes = 900 seconds
+            open_trades_count = len([t for t in self.active_trades_cache if t['status'] != 'Closed'])
+            self.notifier.send_system_health(open_trades_count)
+
     async def run(self):
         await self.startup_routine()
+        
+        # Start the health check loop in the background
+        asyncio.create_task(self.health_check_loop())
         
         self.market_data.subscribe(self.on_new_tick)
         
