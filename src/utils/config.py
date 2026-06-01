@@ -22,5 +22,17 @@ class Config:
         for attr in ['DHAN_CLIENT_ID', 'DHAN_ACCESS_TOKEN', 'SUPABASE_URL', 'SUPABASE_KEY', 'DISCORD_WEBHOOK_URL']:
             if not getattr(cls, attr):
                 missing.append(attr)
+                
+        # Debug logging for Supabase Key
+        if cls.SUPABASE_KEY:
+            key_len = len(cls.SUPABASE_KEY)
+            print(f"DEBUG - Supabase Key Length: {key_len}")
+            if key_len > 10:
+                print(f"DEBUG - Supabase Key starts with: {cls.SUPABASE_KEY[:5]}... ends with: ...{cls.SUPABASE_KEY[-5:]}")
+            else:
+                print(f"DEBUG - Supabase Key is unusually short!")
+        else:
+            print("DEBUG - Supabase Key is EMPTY or None!")
+            
         if missing:
             raise ValueError(f"Missing required environment variables: {', '.join(missing)}")
