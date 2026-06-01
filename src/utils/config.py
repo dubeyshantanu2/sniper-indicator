@@ -9,8 +9,8 @@ class Config:
     DHAN_ACCESS_TOKEN = os.getenv("DHAN_ACCESS_TOKEN")
     
     # Supabase
-    SUPABASE_URL = os.getenv("SUPABASE_URL")
-    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+    SUPABASE_URL = os.getenv("SUPABASE_URL", "").strip()
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY", "").strip()
     
     # Discord
     DISCORD_WEBHOOK_URL = os.getenv("DISCORD_WEBHOOK_URL")
